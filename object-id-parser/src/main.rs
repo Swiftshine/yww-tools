@@ -169,17 +169,17 @@ fn main() -> Result<()> {
         let max_len = category
             .objects
             .iter()
-            .map(|c| c.global.name.len())
+            .map(|c| c.local.name.len())
             .max()
             .unwrap_or(0);
 
         for conv in &category.objects {
-            let name = &conv.global.name;
+            let name = &conv.local.name;
 
             println!(
                 "    {:<width$} = {},",
                 name,
-                conv.global.id,
+                conv.local.id,
                 width = max_len
             );
         }
