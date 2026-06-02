@@ -1,10 +1,9 @@
-use std::fs;
-use std::env;
-use std::io::BufRead;
-use std::io::Cursor;
 use anyhow::{Result, ensure};
-use byteorder::BigEndian;
-use byteorder::ReadBytesExt;
+use byteorder::{BigEndian, ReadBytesExt};
+use std::{
+    env, fs,
+    io::{BufRead, Cursor},
+};
 
 // USv32 address
 const TABLE_ADDRESS_START: usize = 0x102A21BC;
@@ -18,7 +17,7 @@ struct ObjectID {
 #[derive(Debug)]
 struct Conversion {
     global: ObjectID,
-    local: ObjectID
+    local: ObjectID,
 }
 
 #[derive(Debug)]
@@ -38,13 +37,13 @@ const fn address_to_elf_offset(address: usize) -> usize {
 }
 
 struct Reader<'a> {
-    cursor: Cursor<&'a [u8]>    
+    cursor: Cursor<&'a [u8]>,
 }
 
 impl<'a> Reader<'a> {
     fn new(bytes: &'a [u8]) -> Self {
         Self {
-            cursor: Cursor::new(bytes)
+            cursor: Cursor::new(bytes),
         }
     }
 
@@ -75,7 +74,6 @@ impl<'a> Reader<'a> {
             let string_pointer = self.read_u32()?;
             let string_offset = address_to_elf_offset(string_pointer as usize);
             let pos = self.cursor.position();
-            
 
             self.cursor.set_position(string_offset as u64);
 
@@ -113,7 +111,7 @@ fn main() -> Result<()> {
         ("Enemy", 130), // the game's code specifies 128 but *really* the list extends for 2 more than that
         ("Gimmick", 455),
         ("Item", 18),
-        ("Terrain", 41)
+        ("Terrain", 41),
     ];
 
     let mut categories = Vec::new();
@@ -136,13 +134,21 @@ fn main() -> Result<()> {
     println!("ENUM_CLASS(ObjectID,");
 
     for category in &categories {
-        println!("    /* {} */", category.name);
+        let max_len = category
+            .objects
+            .iter()
+            .map(|c| c.global.name.len())
+            .max()
+            .unwrap_or(0);
 
         for conv in &category.objects {
+            let name = &conv.global.name;
+
             println!(
-                "    OBJECT_ID_{} = {},",
-                conv.global.name.to_uppercase(),
-                conv.global.id
+                "    {:<width$} = {},",
+                name,
+                conv.global.id,
+                width = max_len
             );
         }
 
@@ -157,17 +163,27 @@ fn main() -> Result<()> {
         if category.objects.len() <= 1 {
             continue;
         }
-    
+
         println!("ENUM_CLASS({}ID,", category.name);
-    
+
+        let max_len = category
+            .objects
+            .iter()
+            .map(|c| c.global.name.len())
+            .max()
+            .unwrap_or(0);
+
         for conv in &category.objects {
+            let name = &conv.global.name;
+
             println!(
-                "    {} = {},",
-                conv.local.name.to_uppercase(),
-                conv.local.id
+                "    {:<width$} = {},",
+                name,
+                conv.global.id,
+                width = max_len
             );
         }
-    
+
         println!(");");
         println!();
     }
